@@ -96,30 +96,30 @@ PORT=8002
 # =====================================
 # 🗄️ DATABASE (MongoDB Atlas)
 # =====================================
-MONGO_URI=mongodb+srv://greatman:4OMHqFMIZxVNKjhR@cluster0.cn6rp5p.mongodb.net
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster-url>.mongodb.net
 DB_NAME=TaskManagement
 
 # =====================================
 # 🔐 AUTHENTICATION (JWT)
 # =====================================
-JWT_SECRET=WDPZUWBu6ZiHpaVGvgmptS4criqka3ito6PjIpwD02A=
+JWT_SECRET=<your_jwt_secret_key>
 JWT_EXPIRES_IN=1d
 
 # =====================================
 # 🧰 REDIS / BULLMQ CONFIGURATION
 # =====================================
-REDIS_URL=redis-16635.c15.us-east-1-2.ec2.redns.redis-cloud.com
-REDIS_PASS=tyEJDzrWWAh0sST72aiOdNXD1nCpTHTK
+REDIS_URL=<your_redis_url>
+REDIS_PASS=<your_redis_password>
 
 # =====================================
 # 🤖 GOOGLE GEMINI AI CONFIGURATION
 # =====================================
-GEMINI_API_KEY=AIzaSyCzV7W59M3jPir43fo350s90Xip_pSArcE
+GEMINI_API_KEY=<your_gemini_api_key>
 
 # =====================================
 # 📬 EMAIL SERVICE (BREVO / NODEMAILER)
 # =====================================
-BREVO_API_KEY=your_brevo_api_key
+BREVO_API_KEY=<your_brevo_api_key>
 
 # =====================================
 # 🧪 OPTIONAL LOCAL DEVELOPMENT CONFIG
@@ -129,6 +129,7 @@ BREVO_API_KEY=your_brevo_api_key
 # MONGO_URI=mongodb://localhost:27017/task_management
 # REDIS_HOST=127.0.0.1
 # REDIS_PORT=6379
+
 
 ```
 
