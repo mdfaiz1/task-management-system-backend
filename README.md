@@ -26,45 +26,46 @@ It supports **task creation**, **automatic reminders**, **team collaboration**, 
 task-management-backend/
 │
 ├── src/
+|   ├── BullMqQueus/             # Bull MQ Queues
 │   ├── config/
 │   │   ├── db.js                # MongoDB connection
 │   │   ├── redis.js             # Redis connection
 │   │
 │   ├── controllers/             # Controllers for handling requests
-│   │   ├── taskController.js
-│   │   ├── userController.js
-│   │   ├── teamController.js
-│   │   └── mailController.js
+│   │   ├── task.controller.js
+│   │   ├── auth.controller.js
+│   │   ├── team.controller.js
 │   │
+|   ├── Middelwares/
+|   |   ├── auth.middlewares.js
+|   |   └── multer.middlewares.js
+│   │   
 │   ├── models/                  # Database models (Mongoose)
-│   │   ├── Task.js
-│   │   ├── User.js
-│   │   ├── Team.js
+│   │   ├── Task.model.js
+│   │   ├── User.model.js
+│   │   ├── Team.model.js
+|   |   ├── Invitation.model.js
 │   │
 │   ├── jobs/                    # BullMQ job processors
 │   │   ├── reminderJob.js
 │   │   └── emailJob.js
 │   │
-│   ├── queues/                  # BullMQ queue setup
-│   │   ├── reminderQueue.js
-│   │   └── emailQueue.js
 │   │
 │   ├── routes/                  # Express route definitions
 │   │   ├── taskRoutes.js
-│   │   ├── userRoutes.js
+│   │   ├── AuthRoutes.js
 │   │   ├── teamRoutes.js
-│   │   └── index.js
 │   │
 │   ├── utils/                   # Helper functions
-│   │   ├── sendMail.js
-│   │   └── helpers.js
+│   │   ├── geminiClient.js
+│   │   └── generateOtp.js
 │   │
 │   ├── app.js                   # Express app configuration
-│   └── server.js                # Entry point
 │
 ├── .env                         # Environment variables
 ├── .gitignore
 ├── package.json
+├── index.js
 └── README.md
 ```
 
@@ -87,23 +88,51 @@ npm install
 Create a `.env` file in the root directory and add the following:
 
 ```env
-PORT=5000
-MONGO_URI=mongodb://localhost:27017/task_management
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
+# =====================================
+# 🌐 SERVER CONFIGURATION
+# =====================================
+PORT=8002
 
-# Email (Brevo / Nodemailer)
+# =====================================
+# 🗄️ DATABASE (MongoDB Atlas)
+# =====================================
+MONGO_URI=mongodb+srv://greatman:4OMHqFMIZxVNKjhR@cluster0.cn6rp5p.mongodb.net
+DB_NAME=TaskManagement
+
+# =====================================
+# 🔐 AUTHENTICATION (JWT)
+# =====================================
+JWT_SECRET=WDPZUWBu6ZiHpaVGvgmptS4criqka3ito6PjIpwD02A=
+JWT_EXPIRES_IN=1d
+
+# =====================================
+# 🧰 REDIS / BULLMQ CONFIGURATION
+# =====================================
+REDIS_URL=redis-16635.c15.us-east-1-2.ec2.redns.redis-cloud.com
+REDIS_PASS=tyEJDzrWWAh0sST72aiOdNXD1nCpTHTK
+
+# =====================================
+# 🤖 GOOGLE GEMINI AI CONFIGURATION
+# =====================================
+GEMINI_API_KEY=AIzaSyCzV7W59M3jPir43fo350s90Xip_pSArcE
+
+# =====================================
+# 📬 EMAIL SERVICE (BREVO / NODEMAILER)
+# =====================================
 BREVO_API_KEY=your_brevo_api_key
 
-# JWT Secret (for authentication)
-JWT_SECRET=your_secret_key
+# =====================================
+# 🧪 OPTIONAL LOCAL DEVELOPMENT CONFIG
+# =====================================
+# Uncomment below lines when running locally instead of cloud
+# PORT=5000
+# MONGO_URI=mongodb://localhost:27017/task_management
+# REDIS_HOST=127.0.0.1
+# REDIS_PORT=6379
+
 ```
 
-### 4️⃣ Start Redis Server
-Make sure Redis is running locally:
-```bash
-redis-server
-```
+
 
 ### 5️⃣ Run the Application
 ```bash
@@ -147,17 +176,58 @@ Server will start on **http://localhost:5000**
 
 ## 🧠 Example API Endpoints
 
+## 👤 User (Auth) APIs
+
 | Method | Endpoint | Description |
 |--------|-----------|-------------|
 | **POST** | `/api/users/register` | Register a new user |
+| **POST** | `/api/users/verify-otp` | Verify user OTP (protected) |
 | **POST** | `/api/users/login` | Login user |
-| **GET** | `/api/tasks` | Fetch all tasks |
-| **POST** | `/api/tasks` | Create new task |
-| **PUT** | `/api/tasks/:id` | Update task |
-| **DELETE** | `/api/tasks/:id` | Delete task |
-| **POST** | `/api/tasks/:id/remind` | Schedule a reminder |
-| **POST** | `/api/teams/invite` | Invite user to team |
-| **POST** | `/api/mail/send` | Send manual email |
+| **POST** | `/api/users/logout` | Logout user (protected) |
+
+---
+
+## ✅ Task APIs
+
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| **POST** | `/api/tasks/suggest-details` | Generate AI-based task details using Google Gemini |
+| **POST** | `/api/tasks` | Create a new task |
+| **GET** | `/api/tasks` | Get all tasks for logged-in user |
+| **DELETE** | `/api/tasks/:taskId` | Delete a specific task |
+| **PATCH** | `/api/tasks/:taskId/status` | Change status of a task (e.g., completed / pending) |
+| **POST** | `/api/tasks/:taskId/comment` | Add a comment with optional file attachments (Multer) |
+| **GET** | `/api/tasks/filter?status=<value>` | Filter tasks by status |
+| **GET** | `/api/tasks/search?query=<keyword>` | Search tasks by title or description |
+
+---
+
+## 👥 Team APIs
+
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| **POST** | `/api/teams` | Create a new team |
+| **POST** | `/api/teams/:teamId/invite` | Invite a member to a specific team |
+| **POST** | `/api/teams/invites/:inviteId/accept` | Accept a team invitation |
+
+---
+
+## 📬 Email APIs
+
+| Method | Endpoint | Description |
+|--------|-----------|-------------|
+| **POST** | `/api/mail/send` | Send a manual email notification |
+| **POST** | `/api/tasks/:taskId/remind` | Schedule an automatic reminder email (BullMQ + Redis) |
+
+---
+
+## ⚙️ Middleware Usage
+
+| Middleware | Purpose |
+|-------------|----------|
+| **protectRoute** | Ensures the route is accessed by authenticated users |
+| **checkVerified** | Checks if user’s email/OTP is verified |
+| **multerUpload** | Handles file uploads for comments and attachments |
 
 ---
 
