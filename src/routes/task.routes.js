@@ -6,6 +6,8 @@ import {
   changeTaskStatus,
   commentOnTask,
   suggestTaskDetails,
+  filterTasksByStatus,
+  searchTasks,
 } from "../controllers/task.controller.js";
 
 import { protectRoute, checkVerified } from "../middlewares/auth.middleware.js";
@@ -27,5 +29,7 @@ router.post(
   multerUpload.array("attachments", 5),
   commentOnTask
 );
+router.get("/filter", filterTasksByStatus);
+router.get("/search", searchTasks);
 
 export default router;
