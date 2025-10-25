@@ -4,10 +4,29 @@ import { User } from "../models/user.model.js";
 // import { geminiClient as client } from "../utils/geminiClient.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+import { GoogleGenAI } from "@google/genai";
+
+// The client gets the API key from the environment variable `GEMINI_API_KEY`.
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// async function main() {
+//   const response = await ai.models.generateContent({
+//     model: "gemini-2.5-flash",
+//     contents: "Explain how AI works in a few words",
+//   });
+//   console.log(response.text);
+// }
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export const suggestTaskDetails = async (req, res) => {
   try {
+    const response = await genAI
+      .getGenerativeModel({ model: "gemini-1.5-flash" })
+      .generateContent("Explain how AI works in a few words");
+
+    console.log(response.response.text());
+    return [];
     const { prompt } = req.body;
 
     if (!prompt || prompt.trim() === "") {
@@ -140,6 +159,54 @@ export const getTasks = async (req, res) => {
     return res.status(200).json({ success: true, tasks });
   } catch (error) {
     console.error("Error in Fetching Tasks:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+export const getTaskById = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const userId = req.user?._id;
+    const task = await Task.findById(taskId)
+      .populate("createdBy", "name email")
+      .populate("assignedTo", "name email")
+      .populate("teamId", "name owner members");
+    if (!task) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Task not found" });
+    }
+    // Permission Check
+    if (task.teamId) {
+      // Team task → only team owner or team member can access
+      const team = task.teamId;
+      const isOwner = team.owner.toString() === userId.toString();
+      const isMember = team.members.some(
+        member => member.toString() === userId.toString()
+      );
+      if (!isOwner && !isMember) {
+        return res.status(403).json({
+          success: false,
+          message: "Not authorized to access this team task",
+        });
+      }
+    } else {
+      // Personal task → only creator or assigned user can access
+      const isCreator = task.createdBy._id.toString() === userId.toString();
+      const isAssignee =
+        task.assignedTo && task.assignedTo._id.toString() === userId.toString();
+      if (!isCreator && !isAssignee) {
+        return res.status(403).json({
+          success: false,
+          message: "Not authorized to access this personal task",
+        });
+      }
+    }
+    return res.status(200).json({ success: true, task });
+  } catch (error) {
+    console.error("Error in Fetching Task by ID:", error);
     return res
       .status(500)
       .json({ success: false, message: "Internal Server Error" });
@@ -303,5 +370,60 @@ export const commentOnTask = async (req, res) => {
       success: false,
       message: "Internal Server Error",
     });
+  }
+};
+
+export const filterTasksByStatus = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { status } = req.query;
+    const validStatuses = ["open", "in-progress", "completed"];
+    if (!validStatuses.includes(status)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid status value" });
+    }
+    const tasks = await Task.find({
+      $or: [{ createdBy: userId }, { assignedTo: userId }],
+      status: status,
+    })
+      .populate("createdBy", "name email")
+      .populate("assignedTo", "name email")
+      .populate("teamId", "name");
+    return res.status(200).json({ success: true, tasks });
+  } catch (error) {
+    console.error("Error in Filtering Tasks by Status:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+// As a user, I want to search for tasks by title or description.
+export const searchTasks = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { query } = req.query;
+    if (!query || query.trim() === "") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Search query is required" });
+    }
+    const regex = new RegExp(query, "i"); // case-insensitive search
+    const tasks = await Task.find({
+      $and: [
+        { $or: [{ createdBy: userId }, { assignedTo: userId }] },
+        { $or: [{ title: regex }, { description: regex }] },
+      ],
+    })
+      .populate("createdBy", "name email")
+      .populate("assignedTo", "name email")
+      .populate("teamId", "name");
+    return res.status(200).json({ success: true, tasks });
+  } catch (error) {
+    console.error("Error in Searching Tasks:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
   }
 };
