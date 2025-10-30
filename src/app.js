@@ -1,6 +1,5 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import cors from "cors";
 import authRouter from "./routes/auth.routes.js";
 import teamRouter from "./routes/team.routes.js";
 import taskRouter from "./routes/task.routes.js";
